@@ -12,6 +12,8 @@ public class HumanController : MonoBehaviour
     public bool isSelected;
     [SerializeField] protected Slider loadSlider;
 
+    
+
 
 
 
@@ -19,7 +21,7 @@ public class HumanController : MonoBehaviour
     void Start()
     {
         agent = gameObject.GetComponent<NavMeshAgent>();
-        loadSlider = gameObject.transform.GetChild(1).transform.GetChild(0).GetComponent<Slider>();
+        loadSlider = gameObject.transform.GetChild(0).transform.GetChild(0).GetComponent<Slider>();
     }
 
     void Update()

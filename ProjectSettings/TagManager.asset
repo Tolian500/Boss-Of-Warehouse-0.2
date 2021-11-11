@@ -8,6 +8,7 @@ TagManager:
   - Resources
   - Target
   - NPC
+  - Track
   layers:
   - Default
   - TransparentFX

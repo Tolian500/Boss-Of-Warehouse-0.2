@@ -14,9 +14,12 @@ public class CameraControl : MonoBehaviour
     private GameObject player;
     [SerializeField] float maxHight;
     [SerializeField] float minHight;
+    [SerializeField] float[] minMaxRotationX;
     public Vector3 minBorderPos;
     public Vector3 maxBorderPos;
 
+    private float highCoef;
+    private float angleCoef;
 
     // Start is called before the first frame update
     void Start()
@@ -27,6 +30,8 @@ public class CameraControl : MonoBehaviour
     private void Awake()
     {
         player = GameObject.Find("Player");
+        highCoef = 100 / (maxHight - minHight);
+        angleCoef = (minMaxRotationX[1] - minMaxRotationX[0]) / 100;
     }
     // Update is called once per frame
     void Update()
@@ -40,7 +45,7 @@ public class CameraControl : MonoBehaviour
             gameObject.transform.position = new Vector3(player.transform.position.x, player.transform.position.y + 7f, player.transform.position.z + 5f);
 
         }
-        CameraBorder();
+        
 
 
 
@@ -70,7 +75,7 @@ public class CameraControl : MonoBehaviour
             // Move the camera
             transform.position += mUpDirection * Time.deltaTime * mSpeed;
         }
-
+        CameraBorder();
 
     }
     void KeybordMoveControl()
@@ -78,7 +83,10 @@ public class CameraControl : MonoBehaviour
         
         Vector3  move = new Vector3(Input.GetAxis("Vertical"), Input.GetAxis("Horizontal"), -Input.GetAxis("Mouse ScrollWheel"));
         gameObject.transform.position = gameObject.transform.position + new Vector3(-move.y, move.z, -move.x) * PanSpeed * Time.deltaTime;
-      
+        //gameObject.transform.eulerAngles = gameObject.transform.eulerAngles + new Vector3 (move.z/5,0,0);
+        
+        gameObject.transform.eulerAngles = new Vector3(minMaxRotationX[0] + angleCoef * highCoef * gameObject.transform.position.y, gameObject.transform.eulerAngles.y, gameObject.transform.eulerAngles.z);
+        CameraBorder();
     }
     public void ChangeFixedToPlayer()
     {
@@ -95,6 +103,15 @@ public class CameraControl : MonoBehaviour
         {
             gameObject.transform.position = new Vector3(transform.position.x, minHight, transform.position.z);
         }
+       if (transform.eulerAngles.x >= minMaxRotationX[1])
+        {
+           gameObject.transform.eulerAngles = new Vector3(minMaxRotationX[1], transform.eulerAngles.y, transform.eulerAngles.z);
+        }
+       if (transform.eulerAngles.x <= minMaxRotationX[0])
+        {
+            gameObject.transform.eulerAngles = new Vector3(minMaxRotationX[0], transform.eulerAngles.y, transform.eulerAngles.z);
+        }
+       
         if (transform.position.x <= minBorderPos.x)
         {
             gameObject.transform.position = new Vector3(minBorderPos.x, transform.position.y, transform.position.z);

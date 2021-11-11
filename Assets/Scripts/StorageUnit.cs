@@ -7,6 +7,8 @@ public class StorageUnit : MonoBehaviour
 
     public bool isStored;
     public int objectType;
+    public bool isSelected;
+
     // Start is called before the first frame update
     void Start()
     {

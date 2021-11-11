@@ -19,6 +19,7 @@ public class PlayerController : HumanController
     public GameObject task1Toggle;
     public GameObject task2Toggle;
     [SerializeField] TextMeshProUGUI mainText;
+    private GameObject taskbar;
 
     [SerializeField] float loadTime;
     private IEnumerator coroutine;
@@ -27,13 +28,23 @@ public class PlayerController : HumanController
     [SerializeField] GameObject audioEnvironment;
     [SerializeField] string playerName;
     int boxHasSet;
+
     [SerializeField] GameObject selectedObject;
+    [SerializeField] GameObject targetObject;
+    private GameObject previousTarget;
 
     private Camera topCamera;
+    public GameObject selectIndicator;
+
+    
 
     [SerializeField] private List<Material> previousMaterials;
-
     [SerializeField] private Material[] typeMaterials;
+
+    private int money;
+    [SerializeField] int moneyFlow;
+
+
 
 
 
@@ -65,7 +76,9 @@ public class PlayerController : HumanController
             playerName = DataSavier.Instance.currentPlayerName;
         }
         isSelected = true;
-        loadSlider = gameObject.transform.GetChild(1).transform.GetChild(0).GetComponent<Slider>();
+        taskbar = GameObject.Find("MissionPanel");
+        //loadSlider = gameObject.transform.GetChild(1).transform.GetChild(0).GetComponent<Slider>();
+        money = 0;
 
     }
 
@@ -75,22 +88,38 @@ public class PlayerController : HumanController
     {
         if (Input.GetMouseButtonDown(1) & !inMenu & isSelected)
         {
-
+            ResetAndClearTarget();
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
             if (Physics.Raycast(ray, out hit)) // Navigatin main player
             {
-                Debug.Log(hit.transform.position);
-                if (hit.transform.gameObject.CompareTag("Rack"))
+                Debug.Log(hit.transform.name + " is hitted");
+                if (hit.transform.gameObject.GetComponent<StorageUnit>())
                 {
                     agent.SetDestination(hit.transform.position);
                     clickSound.Play();
-                    Debug.Log("Rack was hited = " + hit.transform.position);
+
+                    hit.transform.gameObject.GetComponentInParent<StorageUnit>().isSelected = true;
+                    if (hit.transform.gameObject.CompareTag("Track")) // Slided Truck direction
+                    {
+                        agent.SetDestination(hit.transform.position + new Vector3(5, 0));
+                        Debug.Log("Moving to track to coordinates: " + agent.destination);
+                    }
+                    
+                    
+                    targetObject = hit.transform.gameObject;
+                    previousTarget = targetObject;
+                    
+                    selectIndicator.transform.position = hit.transform.position + new Vector3(0, 3);
                 }
+                
+
                 else
                 {
                     agent.SetDestination(hit.point);
+                    selectIndicator.transform.position = hit.point;
+                    targetObject = null;
                     clickSound.Play();
                 }
                 clickSound.Play();
@@ -146,148 +175,162 @@ public class PlayerController : HumanController
     {
 
         loadSlider.gameObject.SetActive(false);
-        loadSlider.transform.rotation = gameObject.transform.rotation;
 
+        loadSlider.value = loadSlider.minValue;
         coroutine = playerLoading(loadTime);
         StopCoroutine(coroutine);
-        loadSlider.value = loadSlider.minValue;
+        
         if (other.gameObject.name == "Computer")
         {
             topCamera = GameObject.Find("Top Camera").GetComponent<Camera>();
             topCamera.enabled = false;
-
+            
             foreach (GameObject targetRack in GameManager.instance.storedRacks)
             {
-                
-                targetRack.transform.GetComponentInChildren<MeshRenderer>().material = mainMaterial;
+               targetRack.transform.GetComponentInChildren<MeshRenderer>().material = mainMaterial;
             }
-
-            GameManager.instance.targetRacks[0].transform.GetComponentInChildren<MeshRenderer>().material = previousMaterial;
-            if (GameManager.instance.missionNumber == 2)
-            {
-                GameManager.instance.targetRacks[0].transform.GetComponentInChildren<MeshRenderer>().material = previousMaterial;
-            }
-            cam = Camera.main;
+           cam = Camera.main;
         }
     }
     private void OnTriggerStay(Collider other)
     {
-        if (other.gameObject.CompareTag("Resources")) // taking box from Resoure palette
+        if (other.gameObject.transform.GetComponent<StorageUnit>() && other.gameObject.transform.GetComponent<StorageUnit>().isSelected)
         {
-            if (other.gameObject.transform.GetChild(0).gameObject.activeSelf & !hasBox & loadSlider.value == loadSlider.maxValue)
+            if (other.gameObject.CompareTag("Resources")) // taking box from Resoure palette
             {
-                TakingBox(other);
-                audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
-                loadSlider.value = 0;
-                ChangeSliderColour(1);
-
-                if (GameManager.instance.missionNumber == 0)
+                if (other.gameObject.transform.GetComponent<StorageUnit>().isSelected & !hasBox & loadSlider.value == loadSlider.maxValue)
                 {
-                    task1Toggle.GetComponent<Toggle>().isOn = true;
-                }
-            }
+                    TakingBox(other);
+                    audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
+                    loadSlider.value = 0;
+                    ChangeSliderColour(1);
+                    GameManager.instance.emptyResources.Add(other.gameObject);
+                    GameManager.instance.storedResources.Remove(other.gameObject);
 
-
-        }
-        else if (other.gameObject.CompareTag("Rack"))
-        {
-            if (!other.gameObject.transform.GetChild(0).gameObject.activeSelf & hasBox & loadSlider.value == loadSlider.maxValue) // putting box on the rack
-            {
-
-                PuttingBox(other);
-                audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
-
-
-                loadSlider.value = 0;
-                ChangeSliderColour(0);
-
-                GameManager.instance.storedRacks.Add(other.gameObject);
-                GameManager.instance.emptyRacks.Remove(other.gameObject);
-
-            }
-            else if (other.gameObject.transform.GetChild(0).gameObject.activeSelf & !hasBox & loadSlider.value == loadSlider.maxValue) // taking box from Rack
-            {
-                TakingBox(other);
-
-                audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
-                task1Toggle.GetComponent<Toggle>().isOn = true;
-                loadSlider.value = 0;
-                ChangeSliderColour(1);
-
-                GameManager.instance.storedRacks.Remove(other.gameObject);
-                GameManager.instance.emptyRacks.Add(other.gameObject);
-
-            }
-
-        }
-
-        else if (other.gameObject.CompareTag("Target"))
-        {
-            if (hasBox & loadSlider.value == loadSlider.maxValue)
-            {
-                PuttingBox(other);
-
-                audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
-                //other.transform.GetComponentInChildren<MeshRenderer>().material = mainMaterial;
-                other.transform.GetChild(1).GetComponent<MeshRenderer>().material = mainMaterial;
-                //other.transform.tag = "Rack";
-                GameManager.instance.targetRacks.Remove(other.gameObject);
-                GameManager.instance.storedTargetRacks.Add(other.gameObject);
-
-                if (GameManager.instance.missionNumber == 0)
-                {
-                    task2Toggle = GameObject.Find("Task2Toggle");
-                    task2Toggle.GetComponent<Toggle>().isOn = true;
-                    AltCheckTast1Condition();
-                }
-                else if (GameManager.instance.missionNumber == 1)
-
-                {
-                    boxHasSet++;
-                    GameManager.instance.taskBar.transform.GetChild(0).gameObject.transform.Find("Label").GetComponent<Text>().text = boxHasSet.ToString() + " of 4 box has set";
-                    CheckTask2Condition();
+                    if (GameManager.instance.missionNumber == 0)
+                    {
+                        task1Toggle.GetComponent<Toggle>().isOn = true;
+                    }
                 }
 
-                loadSlider.value = 0;
-                ChangeSliderColour(0);
+
             }
-            else if (other.gameObject.GetComponent<StorageUnit>().isStored & !hasBox & loadSlider.value == loadSlider.maxValue) // taking box from Rack
+            else if (other.gameObject.CompareTag("Rack"))
             {
-                TakingBox(other);
-                other.transform.GetComponentInChildren<MeshRenderer>().material = GameManager.instance.gameTaskMat;
+                if (!other.gameObject.transform.GetChild(0).gameObject.activeSelf & hasBox & loadSlider.value == loadSlider.maxValue) // putting box on the rack
+                {
 
-                audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
-                loadSlider.value = 0;
-                ChangeSliderColour(1);
+                    PuttingBox(other);
+                    audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
 
-                GameManager.instance.storedTargetRacks.Remove(other.gameObject);
-                GameManager.instance.targetRacks.Add(other.gameObject);
+
+                    loadSlider.value = 0;
+                    ChangeSliderColour(0);
+
+                    GameManager.instance.storedRacks.Add(other.gameObject);
+                    GameManager.instance.emptyRacks.Remove(other.gameObject);
+
+                }
+                else if (other.gameObject.transform.GetChild(0).gameObject.activeSelf & !hasBox & loadSlider.value == loadSlider.maxValue) // taking box from Rack
+                {
+                    TakingBox(other);
+
+                    audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
+                    if(GameManager.instance.missionNumber == 0)
+                    {
+                        task1Toggle.GetComponent<Toggle>().isOn = true;
+                    }
+                    
+                    loadSlider.value = 0;
+                    ChangeSliderColour(1);
+
+                    GameManager.instance.storedRacks.Remove(other.gameObject);
+                    GameManager.instance.emptyRacks.Add(other.gameObject);
+
+                }
+
             }
+            else if (other.gameObject.CompareTag("Target"))
+            {
+                if (hasBox & loadSlider.value == loadSlider.maxValue)
+                {
+                    PuttingBox(other);
 
+                    audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
+                    //other.transform.GetComponentInChildren<MeshRenderer>().material = mainMaterial;
+                    other.transform.GetChild(1).GetComponent<MeshRenderer>().material = mainMaterial;
+                    //other.transform.tag = "Rack";
+                    GameManager.instance.targetRacks.Remove(other.gameObject);
+                    GameManager.instance.storedTargetRacks.Add(other.gameObject);
+                    GameManager.instance.storedRacks.Add(other.gameObject);
+
+                    if (GameManager.instance.missionNumber == 0)
+                    {
+                        task2Toggle = GameObject.Find("Task2Toggle");
+                        task2Toggle.GetComponent<Toggle>().isOn = true;
+                        AltCheckTast1Condition();
+                    }
+                    else if (GameManager.instance.missionNumber == 1)
+
+                    {
+                        boxHasSet++;
+                        GameManager.instance.taskBar.transform.GetChild(0).gameObject.transform.Find("Label").GetComponent<Text>().text = boxHasSet.ToString() + " of 4 box has set";
+                        CheckTask2Condition();
+                    }
+
+                    loadSlider.value = 0;
+                    ChangeSliderColour(0);
+                }
+                else if (other.gameObject.GetComponent<StorageUnit>().isStored & !hasBox & loadSlider.value == loadSlider.maxValue) // taking box from Target Rack
+                {
+                    TakingBox(other);
+                    other.transform.GetComponentInChildren<MeshRenderer>().material = GameManager.instance.gameTaskMat;
+
+                    audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
+                    loadSlider.value = 0;
+                    ChangeSliderColour(1);
+
+                    GameManager.instance.storedTargetRacks.Remove(other.gameObject);
+                    GameManager.instance.targetRacks.Add(other.gameObject);
+                }
+
+            }
+            else if (other.gameObject.CompareTag("Track"))
+            {
+                if (hasBox & loadSlider.value == loadSlider.maxValue & objectType == other.gameObject.transform.GetComponent<StorageUnit>().objectType)
+                {
+                    PuttingBox(other);
+                    audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
+                    Debug.Log("Box was stored in track");
+                    //taskBar.GetComponent<Animator>().SetTrigger("OpenTaskBar");
+                    other.gameObject.GetComponentInChildren<Animator>().SetTrigger("Start");
+                    audioEnvironment.gameObject.transform.Find("MoneyAudio").GetComponent<AudioSource>().Play();
+                    AddMoney();
+
+
+                    loadSlider.value = 0;
+                    ChangeSliderColour(0);
+                }
+            }
         }
+        else { }
+        
     }
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other) // Start loading to put/take box but without taking
     {
-        Debug.Log("OnTriggerEnter");
+        Debug.Log("Colided with" + other.name);
         loadSlider.value = loadSlider.minValue;
-        loadSlider.gameObject.SetActive(true);
-        loadSlider.transform.rotation = new Quaternion(gameObject.transform.rotation.x, -gameObject.transform.rotation.y, gameObject.transform.rotation.z, 0f);
-
         task1Toggle = GameObject.Find("Task1Toggle");
         task2Toggle = GameObject.Find("Task2Toggle");
 
-        if (other.gameObject.CompareTag("Resources"))
+        if (other.gameObject.CompareTag("Resources") && other.gameObject == targetObject && other.gameObject.GetComponent<StorageUnit>().isStored & !hasBox)
         {
-            if (other.gameObject.transform.GetChild(0).gameObject.activeSelf & !hasBox)
-            {
-                coroutine = playerLoading(loadTime);
-                StartCoroutine(coroutine);
-            }
-
+            coroutine = playerLoading(loadTime);
+            StartCoroutine(coroutine);
 
         }
 
-        else if (other.gameObject.CompareTag("Rack"))
+        else if (other.gameObject.CompareTag("Rack") && other.gameObject == targetObject)
         {
 
             if (hasBox & !other.gameObject.transform.GetChild(0).gameObject.activeSelf)
@@ -304,7 +347,7 @@ public class PlayerController : HumanController
             }
 
         }
-        else if (other.gameObject.CompareTag("Target"))
+        else if (other.gameObject.CompareTag("Target") && other.gameObject == targetObject)
         {
             if (other.gameObject.transform.GetChild(0).gameObject.activeSelf & !hasBox)
             {
@@ -324,23 +367,36 @@ public class PlayerController : HumanController
             topCamera = GameObject.Find("Top Camera").GetComponent<Camera>();
             topCamera.enabled = true;
             cam = topCamera;
-            foreach (GameObject targetRack in GameManager.instance.storedRacks)
-            {
-                previousMaterials.Add(targetRack.transform.GetComponentInChildren<MeshRenderer>().material);
 
-                targetRack.transform.GetComponentInChildren<MeshRenderer>().material = typeMaterials[targetRack.GetComponent<StorageUnit>().objectType];
+            foreach (GameObject racks in GameManager.instance.storedRacks)
+            {
+                previousMaterials.Add(racks.transform.GetComponentInChildren<MeshRenderer>().material);
+
+                racks.transform.GetComponentInChildren<MeshRenderer>().material = typeMaterials[racks.GetComponent<StorageUnit>().objectType];
 
             }
+            
+            /*
             previousMaterial = GameManager.instance.targetRacks[0].transform.GetComponentInChildren<MeshRenderer>().material;
             GameManager.instance.targetRacks[0].transform.GetComponentInChildren<MeshRenderer>().material = GameManager.instance.secondMat;
             if (GameManager.instance.missionNumber == 2)
             {
                 GameManager.instance.targetRacks[0].transform.GetComponentInChildren<MeshRenderer>().material = GameManager.instance.secondMat;
             }
+            */
         }
-        else if (other.gameObject.name == "Boss")
+        else if (other.gameObject.name == "Boss" & GameManager.instance.missionNumber ==2 &!inMenu)
         {
             CheckTask3Condition();
+        }
+        else if (other.gameObject.CompareTag("Track") && other.gameObject == targetObject && GameManager.instance.missionNumber >= 3) // Start loading with tracks // Unlock after mission 3
+        {
+            
+            if (hasBox)
+            {
+                coroutine = playerLoading(loadTime);
+                StartCoroutine(coroutine);
+            }
         }
 
     } // Starting loading after colliding 
@@ -350,6 +406,11 @@ public class PlayerController : HumanController
 
     IEnumerator playerLoading(float loadTime)
     {
+        loadSlider.value = loadSlider.minValue;
+        loadSlider.gameObject.SetActive(true);
+        Debug.Log("Slider set on");
+        loadSlider.transform.rotation = new Quaternion(gameObject.transform.rotation.x, -gameObject.transform.rotation.y, gameObject.transform.rotation.z, 0f);
+
         while (loadSlider.value < loadSlider.maxValue)
         {
             yield return new WaitForSeconds(loadTime);
@@ -387,7 +448,11 @@ public class PlayerController : HumanController
     }
     void PuttingBox(Collider other)
     {
-        other.gameObject.transform.GetChild(0).gameObject.SetActive(true);
+        if(other.gameObject.transform.GetChild(0) != null)
+        {
+            other.gameObject.transform.GetChild(0).gameObject.SetActive(true);
+        }
+        
         other.gameObject.GetComponent<StorageUnit>().isStored = true;
         other.GetComponent<StorageUnit>().objectType = objectType;
         hasBox = false;
@@ -404,8 +469,9 @@ public class PlayerController : HumanController
             //mainText.gameObject.SetActive(true);
             inMenu = true;
             audioEnvironment.gameObject.transform.Find("MissionDoneAudio").GetComponent<AudioSource>().Play();
+            AddMoney();
 
-            GameObject taskbar = GameObject.Find("Mission1Panel");
+
             taskbar.GetComponent<Animator>().SetTrigger("CloseTaskBar");
             GameManager.instance.missionNumber++;
             Debug.Log("Mission number: " + GameManager.instance.missionNumber);
@@ -418,30 +484,72 @@ public class PlayerController : HumanController
 
             inMenu = true;
             audioEnvironment.gameObject.transform.Find("MissionDoneAudio").GetComponent<AudioSource>().Play();
-            mainText.gameObject.GetComponent<TMP_Text>().text = "Excellent!, " + playerName + "! \n There no more missions yet. \n Thx for testing the game";
+            mainText.gameObject.GetComponent<TMP_Text>().text = "Excellent!, " + playerName + "! \n Looks like your manager has task for you. \n Ask him what he need";
             mainText.gameObject.GetComponent<Animator>().SetTrigger("Open");
-            GameObject taskbar = GameObject.Find("Mission1Panel");
+            taskbar.transform.GetChild(0).GetComponent<Toggle>().isOn = false;
             taskbar.GetComponent<Animator>().SetTrigger("CloseTaskBar");
             GameManager.instance.missionNumber++;
             Debug.Log("Mission number: " + GameManager.instance.missionNumber);
+            AddMoney();
         }
     }
     void CheckTask3Condition()
     {
-        if(hasBox&& objectType == 0)
+       
+
+        if (hasBox && objectType == 0 & inMenu == false)
         {
+
+            GenerateTextInMainTextBox("You brought it! Thanks! And now..... COME BACK TO WORK!!!! \n There are 3 cars waiting for load.\n Load with right Color! NOW!!!!");
             Debug.Log("You brought it! Thx! And now come back to work!!!!");
             GameManager.instance.missionNumber++;
+            inMenu = true;
+            audioEnvironment.gameObject.transform.Find("MissionDoneAudio").GetComponent<AudioSource>().Play();
+            Debug.Log("Mission number: " + GameManager.instance.missionNumber);
+            GameObject.Find("Boss").GetComponent<BossController>().BossExit();
+            hasBox = false;
+            taskbar.GetComponent<Animator>().SetTrigger("CloseTaskBar");
+            AddMoney();
         }
-        if(hasBox && objectType > 0)
+        if (hasBox && objectType > 0)
         {
+            GenerateTextInMainTextBox("Wrong one! I need blue one. Put this one back");
             Debug.Log("Wrong one! I need blue blue");
         }
-        if (!hasBox)
+        if (!hasBox & GameManager.instance.missionNumber == 2)
         {
+            GenerateTextInMainTextBox("Bring me blue box. Check in your computer");
             Debug.Log("Bring me blue box. Check in your computer");
+
+            taskbar.transform.GetChild(0).GetComponent<Toggle>().isOn = true;
+            taskbar.transform.GetChild(1).gameObject.transform.Find("Label").GetComponent<Text>().text = "Bring blue box to your boss";
         }
 
 
+    }
+    void ResetAndClearTarget()
+    {
+        targetObject = null;
+        if (previousTarget != null)
+        {
+            previousTarget.transform.gameObject.GetComponentInParent<StorageUnit>().isSelected = false;
+        }
+        
+    }
+    void GenerateTextInMainTextBox(string text )
+    {
+        mainText.gameObject.GetComponent<TMP_Text>().text = text;
+        mainText.gameObject.GetComponent<Animator>().SetTrigger("Open");
+        inMenu = true;
+    }
+    public void LeftMenu()
+    {
+        inMenu = false;
+    }
+    void AddMoney()
+    {
+        money = money + moneyFlow;
+        GameObject.Find("Money").GetComponent<TextMeshProUGUI>().text = "Money: " + money;
+        
     }
 }
