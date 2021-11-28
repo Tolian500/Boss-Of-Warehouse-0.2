@@ -24,7 +24,7 @@ public class CameraControl : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        minBorderPos = new Vector3(-20, 5, -20 );
+        minBorderPos = new Vector3(-20, 5, -20);
         maxBorderPos = new Vector3(20, 5, 10);
     }
     private void Awake()
@@ -58,7 +58,7 @@ public class CameraControl : MonoBehaviour
             // Move the camera
             transform.position -= mRightDirection * Time.deltaTime * mSpeed;
         }
-        else if (Input.mousePosition.x <= 0 - mDelta)
+        else if (Input.mousePosition.x <= 20 - mDelta)
         {
             // Move the camera
             transform.position += mRightDirection * Time.deltaTime * mSpeed;
@@ -70,7 +70,7 @@ public class CameraControl : MonoBehaviour
             transform.position -= mUpDirection * Time.deltaTime * mSpeed;
         }
 
-        else if (Input.mousePosition.y <= 0 - mDelta)
+        else if (Input.mousePosition.y <= 20 - mDelta)
         {
             // Move the camera
             transform.position += mUpDirection * Time.deltaTime * mSpeed;

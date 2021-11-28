@@ -7,6 +7,7 @@ using TMPro;
 
 public class HumanController : MonoBehaviour
 {
+    [SerializeField] bool playable;
     public NavMeshAgent agent;
     public Camera cam;
     public bool isSelected;
@@ -20,6 +21,7 @@ public class HumanController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        cam = Camera.main;
         agent = gameObject.GetComponent<NavMeshAgent>();
         loadSlider = gameObject.transform.GetChild(0).transform.GetChild(0).GetComponent<Slider>();
     }

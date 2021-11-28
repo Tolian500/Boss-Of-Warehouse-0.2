@@ -94,7 +94,7 @@ public class PlayerController : HumanController
 
             if (Physics.Raycast(ray, out hit)) // Navigatin main player
             {
-                Debug.Log(hit.transform.name + " is hitted");
+                
                 if (hit.transform.gameObject.GetComponent<StorageUnit>())
                 {
                     agent.SetDestination(hit.transform.position);
@@ -104,7 +104,7 @@ public class PlayerController : HumanController
                     if (hit.transform.gameObject.CompareTag("Track")) // Slided Truck direction
                     {
                         agent.SetDestination(hit.transform.position + new Vector3(5, 0));
-                        Debug.Log("Moving to track to coordinates: " + agent.destination);
+                       
                     }
                     
                     
@@ -157,11 +157,13 @@ public class PlayerController : HumanController
                 selectedObject = hit.collider.gameObject;
                 selectedObject.GetComponent<HumanController>().isSelected = true;
                 isSelected = false;
+                Debug.Log("NPC selected - " + hit.collider.gameObject.name);
             }
             else if (Physics.Raycast(ray, out hit) && !hit.transform.CompareTag("NPC"))
             {
                 isSelected = true;
                 selectedObject = null;
+                Debug.Log("Main player selected");
             }
         }
 
@@ -201,13 +203,11 @@ public class PlayerController : HumanController
                 if (other.gameObject.transform.GetComponent<StorageUnit>().isSelected & !hasBox & loadSlider.value == loadSlider.maxValue)
                 {
                     TakingBox(other);
-                    audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
-                    loadSlider.value = 0;
-                    ChangeSliderColour(1);
+                    
                     GameManager.instance.emptyResources.Add(other.gameObject);
                     GameManager.instance.storedResources.Remove(other.gameObject);
 
-                    if (GameManager.instance.missionNumber == 0)
+                    if (GameManager.instance.missionNumber == 1)
                     {
                         task1Toggle.GetComponent<Toggle>().isOn = true;
                     }
@@ -221,9 +221,6 @@ public class PlayerController : HumanController
                 {
 
                     PuttingBox(other);
-                    audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
-
-
                     loadSlider.value = 0;
                     ChangeSliderColour(0);
 
@@ -234,16 +231,12 @@ public class PlayerController : HumanController
                 else if (other.gameObject.transform.GetChild(0).gameObject.activeSelf & !hasBox & loadSlider.value == loadSlider.maxValue) // taking box from Rack
                 {
                     TakingBox(other);
-
-                    audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
-                    if(GameManager.instance.missionNumber == 0)
+                                        
+                    if(GameManager.instance.missionNumber == 1)
                     {
                         task1Toggle.GetComponent<Toggle>().isOn = true;
                     }
                     
-                    loadSlider.value = 0;
-                    ChangeSliderColour(1);
-
                     GameManager.instance.storedRacks.Remove(other.gameObject);
                     GameManager.instance.emptyRacks.Add(other.gameObject);
 
@@ -255,22 +248,19 @@ public class PlayerController : HumanController
                 if (hasBox & loadSlider.value == loadSlider.maxValue)
                 {
                     PuttingBox(other);
-
-                    audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
-                    //other.transform.GetComponentInChildren<MeshRenderer>().material = mainMaterial;
                     other.transform.GetChild(1).GetComponent<MeshRenderer>().material = mainMaterial;
-                    //other.transform.tag = "Rack";
+                    
                     GameManager.instance.targetRacks.Remove(other.gameObject);
                     GameManager.instance.storedTargetRacks.Add(other.gameObject);
                     GameManager.instance.storedRacks.Add(other.gameObject);
 
-                    if (GameManager.instance.missionNumber == 0)
+                    if (GameManager.instance.missionNumber == 1)
                     {
                         task2Toggle = GameObject.Find("Task2Toggle");
                         task2Toggle.GetComponent<Toggle>().isOn = true;
                         AltCheckTast1Condition();
                     }
-                    else if (GameManager.instance.missionNumber == 1)
+                    else if (GameManager.instance.missionNumber == 2)
 
                     {
                         boxHasSet++;
@@ -286,31 +276,39 @@ public class PlayerController : HumanController
                     TakingBox(other);
                     other.transform.GetComponentInChildren<MeshRenderer>().material = GameManager.instance.gameTaskMat;
 
-                    audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
-                    loadSlider.value = 0;
-                    ChangeSliderColour(1);
+                    
+                    
 
                     GameManager.instance.storedTargetRacks.Remove(other.gameObject);
                     GameManager.instance.targetRacks.Add(other.gameObject);
                 }
 
             }
-            else if (other.gameObject.CompareTag("Track"))
+            else if (other.gameObject.CompareTag("Track") && hasBox)
             {
-                if (hasBox & loadSlider.value == loadSlider.maxValue & objectType == other.gameObject.transform.GetComponent<StorageUnit>().objectType)
+                if (loadSlider.value == loadSlider.maxValue && objectType == other.gameObject.transform.GetComponent<StorageUnit>().objectType) // Right Track
                 {
                     PuttingBox(other);
-                    audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
-                    Debug.Log("Box was stored in track");
-                    //taskBar.GetComponent<Animator>().SetTrigger("OpenTaskBar");
+
+                    int pointsToAdd = 100 / 20 * other.gameObject.GetComponent<StorageUnit>().waitPoints;
+                    other.gameObject.GetComponent<StorageUnit>().moneySprite.GetComponent<TextMeshPro>().text = pointsToAdd.ToString() + " POINTS";
                     other.gameObject.GetComponentInChildren<Animator>().SetTrigger("Start");
-                    audioEnvironment.gameObject.transform.Find("MoneyAudio").GetComponent<AudioSource>().Play();
-                    AddMoney();
+                    
+                    AddPoints(pointsToAdd);
+                    other.gameObject.GetComponent<StorageUnit>().waitPoints = other.gameObject.GetComponent<StorageUnit>().waitPoints + 20; //Add more waitpoints 
+                    hasBox = false;
 
 
-                    loadSlider.value = 0;
-                    ChangeSliderColour(0);
                 }
+                else if(loadSlider.value == loadSlider.maxValue && objectType != other.gameObject.transform.GetComponent<StorageUnit>().objectType) // Wrong Track
+                {
+                    audioEnvironment.gameObject.transform.Find("MistakeAudio").GetComponent<AudioSource>().Play();
+                    AddPoints(-50);
+                    hasBox = false;
+                    gameObject.transform.GetChild(1).gameObject.SetActive(false);
+
+                }
+
             }
         }
         else { }
@@ -318,7 +316,7 @@ public class PlayerController : HumanController
     }
     private void OnTriggerEnter(Collider other) // Start loading to put/take box but without taking
     {
-        Debug.Log("Colided with" + other.name);
+        
         loadSlider.value = loadSlider.minValue;
         task1Toggle = GameObject.Find("Task1Toggle");
         task2Toggle = GameObject.Find("Task2Toggle");
@@ -385,7 +383,7 @@ public class PlayerController : HumanController
             }
             */
         }
-        else if (other.gameObject.name == "Boss" & GameManager.instance.missionNumber ==2 &!inMenu)
+        else if (other.gameObject.name == "Boss" & GameManager.instance.missionNumber ==3 &!inMenu)
         {
             CheckTask3Condition();
         }
@@ -408,7 +406,7 @@ public class PlayerController : HumanController
     {
         loadSlider.value = loadSlider.minValue;
         loadSlider.gameObject.SetActive(true);
-        Debug.Log("Slider set on");
+        
         loadSlider.transform.rotation = new Quaternion(gameObject.transform.rotation.x, -gameObject.transform.rotation.y, gameObject.transform.rotation.z, 0f);
 
         while (loadSlider.value < loadSlider.maxValue)
@@ -445,6 +443,11 @@ public class PlayerController : HumanController
         other.gameObject.GetComponent<StorageUnit>().isStored = false;
         objectType = other.GetComponent<StorageUnit>().objectType;
         hasBox = true;
+        gameObject.transform.GetChild(1).gameObject.SetActive(true);
+
+        loadSlider.value = 0;
+        ChangeSliderColour(1);
+        audioEnvironment.gameObject.transform.Find("TakeBoxAudio").GetComponent<AudioSource>().Play();
     }
     void PuttingBox(Collider other)
     {
@@ -452,15 +455,20 @@ public class PlayerController : HumanController
         {
             other.gameObject.transform.GetChild(0).gameObject.SetActive(true);
         }
-        
+        audioEnvironment.gameObject.transform.Find("PutBoxAudio").GetComponent<AudioSource>().Play();
         other.gameObject.GetComponent<StorageUnit>().isStored = true;
         other.GetComponent<StorageUnit>().objectType = objectType;
+
         hasBox = false;
+        gameObject.transform.GetChild(1).gameObject.SetActive(false);
+
+        loadSlider.value = 0;
+        ChangeSliderColour(0);
     }
 
     void AltCheckTast1Condition()
     {
-        if (GameManager.instance.storedTargetRacks.Count == 1 && GameManager.instance.missionNumber == 0)
+        if (GameManager.instance.storedTargetRacks.Count == 1 && GameManager.instance.missionNumber == 1)
         {
             // ClearTargetRack();
 
@@ -469,17 +477,17 @@ public class PlayerController : HumanController
             //mainText.gameObject.SetActive(true);
             inMenu = true;
             audioEnvironment.gameObject.transform.Find("MissionDoneAudio").GetComponent<AudioSource>().Play();
-            AddMoney();
+            AddMoney(moneyFlow);
 
 
             taskbar.GetComponent<Animator>().SetTrigger("CloseTaskBar");
             GameManager.instance.missionNumber++;
-            Debug.Log("Mission number: " + GameManager.instance.missionNumber);
+            
         }
     }
     void CheckTask2Condition()
     {
-        if (GameManager.instance.storedTargetRacks.Count == 4 && GameManager.instance.missionNumber == 1)
+        if (GameManager.instance.storedTargetRacks.Count == 4 && GameManager.instance.missionNumber == 2)
         {
 
             inMenu = true;
@@ -489,8 +497,8 @@ public class PlayerController : HumanController
             taskbar.transform.GetChild(0).GetComponent<Toggle>().isOn = false;
             taskbar.GetComponent<Animator>().SetTrigger("CloseTaskBar");
             GameManager.instance.missionNumber++;
-            Debug.Log("Mission number: " + GameManager.instance.missionNumber);
-            AddMoney();
+           
+            AddMoney(moneyFlow);
         }
     }
     void CheckTask3Condition()
@@ -501,25 +509,25 @@ public class PlayerController : HumanController
         {
 
             GenerateTextInMainTextBox("You brought it! Thanks! And now..... COME BACK TO WORK!!!! \n There are 3 cars waiting for load.\n Load with right Color! NOW!!!!");
-            Debug.Log("You brought it! Thx! And now come back to work!!!!");
+            
             GameManager.instance.missionNumber++;
             inMenu = true;
             audioEnvironment.gameObject.transform.Find("MissionDoneAudio").GetComponent<AudioSource>().Play();
-            Debug.Log("Mission number: " + GameManager.instance.missionNumber);
+            
             GameObject.Find("Boss").GetComponent<BossController>().BossExit();
             hasBox = false;
             taskbar.GetComponent<Animator>().SetTrigger("CloseTaskBar");
-            AddMoney();
+            AddMoney(moneyFlow);
         }
         if (hasBox && objectType > 0)
         {
             GenerateTextInMainTextBox("Wrong one! I need blue one. Put this one back");
-            Debug.Log("Wrong one! I need blue blue");
+            
         }
-        if (!hasBox & GameManager.instance.missionNumber == 2)
+        if (!hasBox & GameManager.instance.missionNumber == 3)
         {
             GenerateTextInMainTextBox("Bring me blue box. Check in your computer");
-            Debug.Log("Bring me blue box. Check in your computer");
+            
 
             taskbar.transform.GetChild(0).GetComponent<Toggle>().isOn = true;
             taskbar.transform.GetChild(1).gameObject.transform.Find("Label").GetComponent<Text>().text = "Bring blue box to your boss";
@@ -527,6 +535,7 @@ public class PlayerController : HumanController
 
 
     }
+    
     void ResetAndClearTarget()
     {
         targetObject = null;
@@ -536,7 +545,7 @@ public class PlayerController : HumanController
         }
         
     }
-    void GenerateTextInMainTextBox(string text )
+    void GenerateTextInMainTextBox(string text)
     {
         mainText.gameObject.GetComponent<TMP_Text>().text = text;
         mainText.gameObject.GetComponent<Animator>().SetTrigger("Open");
@@ -546,10 +555,16 @@ public class PlayerController : HumanController
     {
         inMenu = false;
     }
-    void AddMoney()
+    public void AddMoney(int moneyFlow)
     {
         money = money + moneyFlow;
         GameObject.Find("Money").GetComponent<TextMeshProUGUI>().text = "Money: " + money;
-        
+        audioEnvironment.gameObject.transform.Find("MoneyAudio").GetComponent<AudioSource>().Play();
     }
+    void AddPoints(int points)
+    {
+        GameManager.instance.currentPoint += points;
+        GameManager.instance.ChangeLevelPoints();
+    }
+    
 }
