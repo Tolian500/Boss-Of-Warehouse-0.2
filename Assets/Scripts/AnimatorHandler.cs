@@ -5,6 +5,7 @@ using UnityEngine.AI;
 
 public class AnimatorHandler : MonoBehaviour
 {
+    const float locomotionAnimationSmoothTime = .2f;
     private Animator m_Animator;
     private NavMeshAgent m_Agent;
     [SerializeField] float agentSpeed;
@@ -21,8 +22,29 @@ public class AnimatorHandler : MonoBehaviour
     {
         if (m_Agent != null && m_Animator != null)
         {
-            m_Animator.SetFloat("Speed", m_Agent.velocity.magnitude / m_Agent.speed);
+            float speedPercent = m_Agent.velocity.magnitude / m_Agent.speed;
+            
+            
+            
+            m_Animator.SetFloat("speedPercent", speedPercent, locomotionAnimationSmoothTime, Time.deltaTime);
             agentSpeed = m_Agent.velocity.magnitude / m_Agent.speed;
+            
+        }
+    }
+    public void BoxAnimating(bool hasBox)
+    {
+        int putAnimIndex = Random.Range(0, 3);
+        m_Animator.SetInteger("putAnimIndex", putAnimIndex);
+        Debug.Log(putAnimIndex + " = putAnimIndex");
+        if (hasBox == true)
+        {
+            m_Animator.SetBool("hasBox", true);
+            Debug.Log("WithBoxAnim starts");
+        }
+        else
+        {
+            m_Animator.SetBool("hasBox", false);
+            Debug.Log("WithBoxAnim ends");
         }
     }
 }

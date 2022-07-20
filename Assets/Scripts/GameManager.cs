@@ -28,8 +28,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] public List<GameObject> emptyResources;
     [SerializeField] public List<GameObject> storedResources;
 
+    [SerializeField] public List<GameObject> truks;
+    
 
-   
+
+
     [SerializeField] private int waitTime = 1;
 
     public static GameManager instance;
@@ -180,16 +183,13 @@ public class GameManager : MonoBehaviour
     {
         currentPoint = 0;
         levelTargetPoint = 1000;
-        timeRemaining = 90;
-
-        GameObject[] Tracks = GameObject.FindGameObjectsWithTag("Track"); 
-        foreach (GameObject track in Tracks)
+        timeRemaining = 180;
+        while (truks.Count != 0)
         {
-            track.GetComponent<StorageUnit>().StartWaiting(100);
+            RandomTruckTask();
+            Debug.Log("Truck Task Added");
         }
-        
-
-
+       
         taskBar.transform.GetChild(0).gameObject.SetActive(true);
         taskBar.GetComponent<Animator>().SetTrigger("OpenTaskBar");
         ChangeLevelPoints();
@@ -209,12 +209,12 @@ public class GameManager : MonoBehaviour
         currentPoint = 0;
         levelTargetPoint = levelTargetPoint+ levelTargetPoint/10;
         timeRemaining = 90;
-
-        GameObject[] Tracks = GameObject.FindGameObjectsWithTag("Track");
-        foreach (GameObject track in Tracks)
+        while(truks.Count != 0)
         {
-            track.GetComponent<StorageUnit>().StartWaiting(100);
+            RandomTruckTask();
+            Debug.Log("Truck Task Added");
         }
+       
 
         ChangeLevelPoints();
         timer.SetActive(true);
@@ -248,7 +248,7 @@ public class GameManager : MonoBehaviour
             NextArcadeMission(); // NextArcadeMission
         }
 
-        PlayerController.instance.inMenu = false;
+        PlayerController.instance.LeftMenu();
     }
 
     void ClearTargetRack()
@@ -274,7 +274,7 @@ public class GameManager : MonoBehaviour
         {
             yield return new WaitForSeconds(loadTime);
             boxSpawnTime = Random.Range(15, 35); // Spawn Rate min-max
-            Debug.Log("Next box spawn in  " + boxSpawnTime + " seconds");
+            //Debug.Log("Next box spawn in  " + boxSpawnTime + " seconds");
             if (emptyResources.Count != 0)
             {
                 int randomResource = Random.Range(0, emptyResources.Count);
@@ -285,7 +285,7 @@ public class GameManager : MonoBehaviour
                 emptyResources[randomResource].gameObject.GetComponent<StorageUnit>().objectType = randomBoxType;
                 storedResources.Add(emptyResources[randomResource]);
                 emptyResources.Remove(emptyResources[randomResource]);
-                Debug.Log(emptyResources.Count + "empty palets left");
+                //Debug.Log(emptyResources.Count + "empty palets left");
             }
             else
             {
@@ -355,10 +355,25 @@ public class GameManager : MonoBehaviour
             
         }       
         GameObject.Find("MissionTask1").gameObject.GetComponent<Animator>().SetTrigger("Open");
-        PlayerController.instance.inMenu = true;
+        PlayerController.instance.EnterMenu();
 
     }
-
-
+    public void RandomTruckTask()
+    {
+        if(truks.Count != 0)
+        {
+            int randomTruckInd = Random.Range(0, truks.Count);
+            int randomBoxNeed = Random.Range(1, 4);
+            Debug.Log("Truck index = " + randomTruckInd + "Need " + randomBoxNeed + "Boxes");
+            truks[randomTruckInd].GetComponent<BusStorageUnit>().NewTruckTask(randomBoxNeed);
+            truks.Remove(truks[randomTruckInd]);
+        }
+        else
+        {
+            Debug.Log("No more available trucks");
+        }
+        
+    }
+    
 }
 

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.AI;
 
 public class StorageUnit : MonoBehaviour
     {
@@ -10,10 +11,16 @@ public class StorageUnit : MonoBehaviour
     public int objectType;
     public bool isSelected;
     public int waitPoints;
-    [SerializeField] Slider waitSlider;
-    [SerializeField] GameObject fillColor;
-    private Color waitColor;
+    public int nextWaitPoints;
+    [SerializeField] public Slider waitSlider;
+    [SerializeField] protected GameObject fillColor;
+    protected Color waitColor;
     public GameObject moneySprite;
+    public int loadNeed;
+    protected int currentLoad;
+
+    float boxSpawnTime = 1.7f;
+    
 
 
     // Start is called before the first frame update
@@ -27,32 +34,22 @@ public class StorageUnit : MonoBehaviour
     {
         
     }
-    public void StartWaiting(int secToWait)
+    
+    public void SelfPuttingBox()
     {
-        waitSlider.gameObject.SetActive(true);
-        waitPoints = secToWait;
-        StartCoroutine("ObjectWaiting");     
+        StartCoroutine(BoxDisapearCoroutine());
         
     }
-    IEnumerator ObjectWaiting()
+    IEnumerator BoxDisapearCoroutine()
     {
-        
-        while (waitPoints >=0)
+        yield return new WaitForSeconds(boxSpawnTime); 
+        if (gameObject.transform.GetChild(0) != null)
         {
-            yield return new WaitForSeconds(1f);
-            waitPoints -= 1;
-            
-            if (waitSlider != null)
-            {
-                waitSlider.value = waitPoints;
-                waitColor = new Color((1f- waitPoints / 100f), 0.3f, waitPoints / 100f, 0.7f);
-                fillColor.GetComponent<Image>().color = waitColor;
-            }
-            
-
+            gameObject.transform.GetChild(0).gameObject.SetActive(true);
         }
-        waitSlider.gameObject.SetActive(false);
-    }
+        gameObject.GetComponent<StorageUnit>().isStored = true;
+        Debug.Log("Coroutine ends");
 
+    }
 
 }

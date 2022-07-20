@@ -9,6 +9,7 @@ TagManager:
   - Target
   - NPC
   - Track
+  - Environment
   layers:
   - Default
   - TransparentFX

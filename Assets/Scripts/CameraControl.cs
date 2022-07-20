@@ -18,6 +18,8 @@ public class CameraControl : MonoBehaviour
     public Vector3 minBorderPos;
     public Vector3 maxBorderPos;
 
+    public bool movingLocked;
+
     private float highCoef;
     private float angleCoef;
 
@@ -36,15 +38,18 @@ public class CameraControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
-        KeybordMoveControl();
-
-        MouseMoveControl();
-        if (fixedToPlayer)
+        if (movingLocked == false)
         {
-            gameObject.transform.position = new Vector3(player.transform.position.x, player.transform.position.y + 7f, player.transform.position.z + 5f);
+            KeybordMoveControl();
 
+            MouseMoveControl();
+            if (fixedToPlayer)
+            {
+                gameObject.transform.position = new Vector3(player.transform.position.x, player.transform.position.y + 7f, player.transform.position.z + 5f);
+
+            }
         }
+       
         
 
 
